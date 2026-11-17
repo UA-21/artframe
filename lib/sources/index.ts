@@ -45,14 +45,24 @@ export async function searchArtic(query: string): Promise<Artwork[]> {
     }));
 }
 
+const MET_WANTED = 18;
+const MET_BATCH = 25;
+
 /** The Metropolitan Museum of Art: https://metmuseum.github.io/ */
 export async function searchMet(query: string): Promise<Artwork[]> {
-  const base = 'https://collectionapi.metmuseum.org/public/collection/v1';
-  const search = await getJson(`${base}/search?hasImages=true&q=${encodeURIComponent(query)}`);
-  const ids: number[] = (search.objectIDs || []).slice(0, 30);
-  const objects = await Promise.all(ids.map((id) => getJson(`${base}/objects/${id}`).catch(() => null)));
+  const base = 'https://collectionapi.metmuseum.org/public/collection';
+  // Search moved to v1.1 (paginated) in October 2026; object lookups remain on v1.
+  const search = await getJson(`${base}/v1.1/search?hasImages=true&limit=100&q=${encodeURIComponent(query)}`);
+  const ids: number[] = (search.objectIDs || []).slice(0, 100);
+  // Search cannot filter by public domain, so look objects up in batches until enough qualify.
+  const objects: any[] = [];
+  for (let i = 0; i < ids.length && objects.length < MET_WANTED; i += MET_BATCH) {
+    const batch = await Promise.all(
+      ids.slice(i, i + MET_BATCH).map((id) => getJson(`${base}/v1/objects/${id}`).catch(() => null)),
+    );
+    objects.push(...batch.filter((o) => o && o.isPublicDomain && o.primaryImage));
+  }
   return objects
-    .filter((o) => o && o.isPublicDomain && o.primaryImage)
     .slice(0, 24)
     .map((o) => ({
       source: 'met' as const,
