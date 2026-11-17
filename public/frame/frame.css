@@ -1,0 +1,100 @@
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  cursor: none;
+}
+#stage, .slide, .mat, #dim, #off {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+.slide {
+  opacity: 0;
+  -webkit-transition: opacity 2.5s ease-in-out;
+  transition: opacity 2.5s ease-in-out;
+}
+.slide.show { opacity: 1; }
+.mat { box-sizing: border-box; }
+.pic {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.pic img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  -webkit-transform-origin: 50% 50%;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.pic img.cover { object-fit: cover; }
+
+/* Slow drift so no pixel stays lit with the same content (OLED care).
+   "contain" images shrink slightly instead of growing, so artwork is never cropped. */
+@-webkit-keyframes drift-in  { from { -webkit-transform: scale(0.94) translate(-1%, -1%); } to { -webkit-transform: scale(1) translate(0, 0); } }
+@keyframes drift-in          { from { transform: scale(0.94) translate(-1%, -1%); } to { transform: scale(1) translate(0, 0); } }
+@-webkit-keyframes drift-out { from { -webkit-transform: scale(1) translate(0, 0); } to { -webkit-transform: scale(0.94) translate(1%, 1%); } }
+@keyframes drift-out         { from { transform: scale(1) translate(0, 0); } to { transform: scale(0.94) translate(1%, 1%); } }
+@-webkit-keyframes zoom-in   { from { -webkit-transform: scale(1) translate(0, 0); } to { -webkit-transform: scale(1.07) translate(-1%, 1%); } }
+@keyframes zoom-in           { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.07) translate(-1%, 1%); } }
+@-webkit-keyframes zoom-out  { from { -webkit-transform: scale(1.07) translate(1%, -1%); } to { -webkit-transform: scale(1) translate(0, 0); } }
+@keyframes zoom-out          { from { transform: scale(1.07) translate(1%, -1%); } to { transform: scale(1) translate(0, 0); } }
+
+.caption {
+  position: absolute;
+  bottom: 4%;
+  max-width: 34%;
+  padding: 0.7em 1em;
+  color: #b9b4a8;
+  background: rgba(0, 0, 0, 0.45);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2.1vh;
+  line-height: 1.35;
+  display: none;
+}
+.caption.left { left: 3%; text-align: left; }
+.caption.right { right: 3%; text-align: right; }
+.caption .t { font-style: italic; color: #d6d1c4; }
+
+#dim, #off { background: #000; pointer-events: none; }
+#dim { opacity: 0; }
+#off {
+  opacity: 0;
+  -webkit-transition: opacity 3s;
+  transition: opacity 3s;
+}
+#off.on { opacity: 1; }
+
+#msg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44%;
+  text-align: center;
+  color: #6f6b62;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 3vh;
+  line-height: 1.6;
+  display: none;
+}
+#debug {
+  position: absolute;
+  left: 2%;
+  top: 2%;
+  margin: 0;
+  padding: 0.6em 0.9em;
+  color: #9fd89f;
+  background: rgba(0, 0, 0, 0.7);
+  font: 1.8vh/1.4 monospace;
+  display: none;
+  white-space: pre-wrap;
+  max-width: 60%;
+}

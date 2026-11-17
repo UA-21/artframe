@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ArtFrame</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #6f6b62; font: 32px Georgia, serif; }
+  #msg { position: absolute; top: 44%; width: 100%; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="msg">ArtFrame</div>
+<script src="config.js"></script>
+<script>
+  // Thin wrapper: all logic lives on the server, so updates never need a reinstall.
+  (function () {
+    var msg = document.getElementById('msg');
+    if (typeof ARTFRAME_URL !== 'string' || ARTFRAME_URL.indexOf('YOUR-APP') !== -1) {
+      msg.innerHTML = 'ArtFrame<br>Set the TV link in config.js and reinstall.';
+      return;
+    }
+    function go() {
+      if (navigator.onLine === false) {
+        msg.innerHTML = 'ArtFrame<br>Waiting for network…';
+        setTimeout(go, 5000);
+        return;
+      }
+      window.location.replace(ARTFRAME_URL);
+    }
+    go();
+  })();
+</script>
+</body>
+</html>
