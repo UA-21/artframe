@@ -29,7 +29,7 @@ npm run build && npm run e2e
 ## Deploy to Vercel
 
 1. Push this repository to GitHub and import it as a Vercel project.
-2. In the project's **Storage** tab, add a **Neon Postgres** database and a **Blob** store. They set `DATABASE_URL` and `BLOB_READ_WRITE_TOKEN` automatically.
+2. In the project's **Storage** tab, add a **Neon Postgres** database and a **Blob** store (Private is fine). They set the connection variables automatically.
 3. Add the environment variable `ADMIN_PASSWORD` (see `.env.example` for the optional ones).
 4. Deploy, sign in, and upload some images.
 
@@ -66,4 +66,4 @@ Images drift slowly, captions change side and height between images, and the sch
 
 - Uploads are downscaled in the browser to at most 3840 px before upload.
 - Museum works (Art Institute of Chicago, The Met; public domain only) are linked, not copied.
-- Uploaded image URLs are unguessable but not access-controlled; the TV link grants view access, so keep it private.
+- Uploaded images are private (works with a Private Blob store): they are served only to the signed-in owner and to the TV holding the device token. The TV link grants view access, so keep it private.

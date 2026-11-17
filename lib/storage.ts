@@ -2,30 +2,49 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { dataDir } from './db';
 
-const LOCAL_PREFIX = '/api/local-blob/';
-const useVercelBlob = () => !!process.env.BLOB_READ_WRITE_TOKEN;
+/** Uploaded files are never public: they are served through this authenticated route. */
+export const BLOB_ROUTE = '/api/blob/';
 
-/** Store a file and return the URL it can be loaded from. */
+const useVercelBlob = () =>
+  !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID || process.env.VERCEL);
+
+/** Store a file and return the (authenticated) URL it can be loaded from. */
 export async function putBlob(name: string, data: Buffer, contentType: string): Promise<string> {
   if (useVercelBlob()) {
     const { put } = await import('@vercel/blob');
-    const res = await put(name, data, { access: 'public', contentType, addRandomSuffix: false });
-    return res.url;
+    await put(name, data, { access: 'private', contentType, addRandomSuffix: false });
+  } else {
+    const file = localBlobPath(name);
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, data);
   }
-  if (process.env.VERCEL) throw new Error('BLOB_READ_WRITE_TOKEN is not set: connect a Blob store to this project.');
-  const file = path.join(dataDir('blobs'), name);
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, data);
-  return LOCAL_PREFIX + name;
+  return BLOB_ROUTE + name;
+}
+
+/** Read a stored file, or null when it does not exist. */
+export async function getBlob(name: string): Promise<{ body: BodyInit; contentType: string } | null> {
+  if (useVercelBlob()) {
+    const { get } = await import('@vercel/blob');
+    const res = await get(name, { access: 'private' });
+    if (!res || res.statusCode !== 200) return null;
+    return { body: res.stream, contentType: res.blob.contentType };
+  }
+  try {
+    return { body: new Uint8Array(await fs.readFile(localBlobPath(name))), contentType: 'image/jpeg' };
+  } catch {
+    return null;
+  }
 }
 
 export async function delBlob(url: string): Promise<void> {
+  if (!url.startsWith(BLOB_ROUTE)) return;
+  const name = url.slice(BLOB_ROUTE.length);
   try {
-    if (url.startsWith(LOCAL_PREFIX)) {
-      await fs.unlink(localBlobPath(url.slice(LOCAL_PREFIX.length)));
-    } else if (useVercelBlob() && url.includes('.blob.vercel-storage.com/')) {
+    if (useVercelBlob()) {
       const { del } = await import('@vercel/blob');
-      await del(url);
+      await del(name);
+    } else {
+      await fs.unlink(localBlobPath(name));
     }
   } catch {
     // Already gone: nothing to clean up.
@@ -33,7 +52,7 @@ export async function delBlob(url: string): Promise<void> {
 }
 
 /** Resolve a local blob name to a file path, refusing anything outside the blob directory. */
-export function localBlobPath(name: string): string {
+function localBlobPath(name: string): string {
   const root = dataDir('blobs');
   const file = path.resolve(root, name);
   if (!file.startsWith(root + path.sep)) throw new Error('bad path');

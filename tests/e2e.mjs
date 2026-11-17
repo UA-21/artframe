@@ -111,7 +111,7 @@ async function run() {
   const blue = images.find((i) => i.title === 'Blue study');
   await ui.request.post(`${BASE}/api/playlists/${pl.id}`, { data: { imageId: blue.id } });
   await ui.selectOption('#pl', pl.id);
-  await tv.waitForFunction((want) => document.querySelector('.slide.show img')?.getAttribute('src') === want, blue.url, { timeout: 12000 });
+  await tv.waitForFunction((want) => document.querySelector('.slide.show img')?.getAttribute('src').split('?')[0] === want, blue.url, { timeout: 12000 });
   ok(true, 'activating a playlist switches the TV to its images');
 
   // --- Framing: caption and mat
@@ -148,6 +148,8 @@ async function run() {
   ok(true, 'empty library shows a hint on the TV');
   ok(fs.readdirSync(path.join(tmp, 'data', 'blobs', 'art')).length === 0, 'deleting images removes their files');
 
+  const anon = await browser.newContext();
+  ok((await anon.request.get(BASE + blue.url)).status() === 401, 'images are not readable without a session or device token');
   const stranger = await tvCtx.newPage();
   await stranger.goto(BASE + '/frame?device=wrong-token');
   await stranger.waitForFunction(() => document.getElementById('msg').textContent.includes('not paired'));
