@@ -41,9 +41,17 @@ export function dataDir(sub: string): string {
   return dir;
 }
 
+/** Connection string from the environment. Also accepts prefixed names (e.g. STORAGE_DATABASE_URL). */
+export function databaseUrl(): string | undefined {
+  const env = process.env;
+  if (env.DATABASE_URL || env.POSTGRES_URL) return env.DATABASE_URL || env.POSTGRES_URL;
+  const key = Object.keys(env).find((k) => /_(DATABASE|POSTGRES)_URL$/.test(k) && env[k]?.startsWith('postgres'));
+  return key ? env[key] : undefined;
+}
+
 async function create(): Promise<Runner> {
   let run: Runner;
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url = databaseUrl();
   if (url) {
     const { neon } = await import('@neondatabase/serverless');
     const sql = neon(url);
