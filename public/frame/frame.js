@@ -244,9 +244,43 @@
         'images   ' + items.length + '  version ' + version + '\n' +
         'state    ' + (off ? 'scheduled off' : paused ? 'paused' : 'playing') + '\n' +
         'poll     ' + lastPoll + '\n' +
+        'awake    ' + wakeState + '   fullscreen ' + (isFullscreen() ? 'yes' : 'no (press OK)') + '\n' +
         'agent    ' + navigator.userAgent;
     }
   }
+
+  // --- Keep the screen awake and allow full-screen (modern engines only; older TVs skip this).
+  var wakeState = 'unsupported';
+  var wakeLock = null;
+  function keepAwake() {
+    if (!navigator.wakeLock || !navigator.wakeLock.request || wakeLock) return;
+    try {
+      navigator.wakeLock.request('screen').then(function (lock) {
+        wakeLock = lock;
+        wakeState = 'held';
+        lock.addEventListener('release', function () { wakeLock = null; wakeState = 'released'; });
+      }, function (e) { wakeState = 'denied (' + (e && e.name) + ')'; });
+    } catch (e) { wakeState = 'error'; }
+  }
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  function toggleFullscreen() {
+    var root = document.documentElement;
+    try {
+      if (isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+    } catch (e) { /* not supported */ }
+  }
+  // OK / Enter on the remote (or a click) toggles full-screen and re-requests the wake lock.
+  document.addEventListener('keydown', function (e) {
+    if (e.keyCode === 13) { toggleFullscreen(); keepAwake(); }
+  });
+  document.addEventListener('click', function () { toggleFullscreen(); keepAwake(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') keepAwake();
+  });
+  keepAwake();
 
   if (debugOn) startDebug();
   if (!device) {
