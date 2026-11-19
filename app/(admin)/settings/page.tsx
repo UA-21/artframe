@@ -33,6 +33,8 @@ export default function Settings() {
   const [storage, setStorage] = useState({ usedBytes: 0, capBytes: 1 });
   const [error, setError] = useState('');
   const [origin, setOrigin] = useState('');
+  const [pairCode, setPairCode] = useState('');
+  const [pairMsg, setPairMsg] = useState('');
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -153,9 +155,45 @@ export default function Settings() {
         )}
       </div>
 
+      <h2>Connect a TV</h2>
+      <div className="card">
+        <p className="muted">
+          Open the ArtFrame app on the TV, or go to {origin.replace(/^https?:\/\//, '')}/frame in the TV web browser. Enter the code it shows:
+        </p>
+        <form
+          className="row"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              await api('/api/pair', { json: { code: pairCode } });
+              setPairMsg('Connected. The TV starts within a few seconds.');
+              setPairCode('');
+            } catch (err) {
+              setPairMsg((err as Error).message);
+            }
+          }}
+        >
+          <input
+            className="grow"
+            type="text"
+            data-testid="pair-code"
+            placeholder="ABC123"
+            autoCapitalize="characters"
+            autoComplete="off"
+            maxLength={8}
+            value={pairCode}
+            onChange={(e) => setPairCode(e.target.value.toUpperCase())}
+          />
+          <button className="primary" disabled={pairCode.trim().length < 6}>
+            Connect
+          </button>
+        </form>
+        {pairMsg && <p className="muted" data-testid="pair-msg">{pairMsg}</p>}
+      </div>
+
       <h2>TV link</h2>
       <div className="card">
-        <p className="muted">Open this address on the TV (in the ArtFrame app or the TV web browser). Keep it private: anyone with it can view your images.</p>
+        <p className="muted">Alternative to a code: open this address on the TV. Keep it private: anyone with it can view your images.</p>
         <code className="url" data-testid="frame-url">
           {frameUrl}
         </code>

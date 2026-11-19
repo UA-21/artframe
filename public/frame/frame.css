@@ -77,9 +77,9 @@ html, body {
   position: absolute;
   left: 0;
   right: 0;
-  top: 44%;
+  top: 30%;
   text-align: center;
-  color: #6f6b62;
+  color: #8a857a;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 3vh;
   line-height: 1.6;
@@ -97,4 +97,12 @@ html, body {
   display: none;
   white-space: pre-wrap;
   max-width: 60%;
+}
+#msg .host { color: #c9a45c; }
+#msg .code {
+  display: inline-block;
+  margin-top: 0.3em;
+  color: #ece8dd;
+  font: bold 9vh/1.2 monospace;
+  letter-spacing: 0.18em;
 }

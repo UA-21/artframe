@@ -35,28 +35,42 @@ npm run build && npm run e2e
 
 ## Put it on the TV
 
-Sign in, open **Settings**, and copy the **TV link** (`https://…/frame?device=…`).
+**Quick way (no install):** open the TV's web browser and go to `https://YOUR-SITE/frame`. The TV shows a 6-character code; sign in on your phone, open **Settings → Connect a TV**, and enter it. (Settings also shows a full TV link you can open instead of using a code.)
 
-**Quick way (no install):** open the TV's Web Browser app and enter the TV link.
+**LG app (full-screen, with a home-screen icon):** a ready-built package is in `tv-app/`. It only contains the site address from `webos/config.js`; the TV pairs with a code the first time it starts.
 
-**As an app:**
-
-1. On the TV, install the **Developer Mode** app from the LG Content Store, sign in with an LG developer account, and turn Dev Mode on.
-2. On a computer, install the LG CLI: `npm install -g @webos-tools/cli`
-3. Paste the TV link into `webos/config.js`.
-4. Register the TV (`ares-setup-device`), then:
+1. On the TV, install the **Developer Mode** app from the LG Content Store, sign in with an LG developer account (free, from webostv.developer.lge.com), turn **Dev Mode Status** on (the TV restarts), then turn **Key Server** on.
+2. On a computer on the same network, install the LG CLI:
 
 ```bash
-ares-package webos
+npm install -g @webos-tools/cli
+```
+
+3. Register the TV (use the IP address and passphrase shown in the Developer Mode app; port 9922, user `prisoner`):
+
+```bash
+ares-setup-device
 ```
 
 ```bash
-ares-install com.artframe.tv_1.0.0_all.ipk
+ares-novacom --device tv --getkey
 ```
+
+4. Install and start the app:
+
+```bash
+ares-install --device tv tv-app/com.artframe.tv_1.0.0_all.ipk
+```
+
+```bash
+ares-launch --device tv com.artframe.tv
+```
+
+To point the app at a different site, edit `webos/config.js` and rebuild with `ares-package webos -o tv-app`.
 
 Developer Mode sessions expire; extend the session in the Developer Mode app on the TV, or the app is removed and has to be installed again.
 
-Add `&debug=1` to the TV link to show screen size, frame rate and connection status on the TV.
+Add `?debug=1` to the frame address to show screen size, frame rate and connection status on the TV. On TVs whose browser supports it, pressing OK toggles full-screen.
 
 ## OLED care
 

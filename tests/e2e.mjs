@@ -99,6 +99,27 @@ async function run() {
   await ui.waitForSelector('[data-testid=current]');
   ok(true, 'control UI sees the TV and what it shows');
 
+  // --- Pairing a second TV with a code instead of the link
+  const tv2Ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+  const tv2 = await tv2Ctx.newPage();
+  await tv2.goto(BASE + '/frame?poll=2');
+  await tv2.waitForSelector('#msg .code');
+  const code = (await tv2.textContent('#msg .code')).trim();
+  ok(/^[A-Z2-9]{6}$/.test(code), 'unpaired TV shows a 6-character code');
+  ok((await ui.request.post(BASE + '/api/pair', { data: { code: 'ZZZZZZ' } })).status() === 404, 'unknown pairing code is rejected');
+  ok((await tv2Ctx.request.post(BASE + '/api/pair', { data: { code } })).status() === 401, 'only the signed-in owner can approve a code');
+  await ui.goto(BASE + '/settings');
+  await ui.fill('[data-testid=pair-code]', code.toLowerCase());
+  await ui.click('button:has-text("Connect")');
+  await ui.waitForSelector('[data-testid=pair-msg]');
+  await tv2.waitForSelector('.slide.show img', { timeout: 15000 });
+  ok(true, 'entering the code in Settings connects the TV');
+  await tv2.reload();
+  await tv2.waitForSelector('.slide.show img', { timeout: 15000 });
+  ok(true, 'paired TV stays connected after a reload');
+  await tv2Ctx.close();
+  await ui.goto(BASE + '/');
+
   // --- Next command
   await ui.click('text=Next');
   await tv.waitForFunction((prev) => document.querySelector('.slide.show img')?.getAttribute('src') !== prev, first, { timeout: 12000 });
@@ -152,7 +173,8 @@ async function run() {
   ok((await anon.request.get(BASE + blue.url)).status() === 401, 'images are not readable without a session or device token');
   const stranger = await tvCtx.newPage();
   await stranger.goto(BASE + '/frame?device=wrong-token');
-  await stranger.waitForFunction(() => document.getElementById('msg').textContent.includes('not paired'));
+  await stranger.waitForSelector('#msg .code');
+  ok(true, 'a wrong device token falls back to the pairing code screen');
   ok((await stranger.request.get(BASE + '/api/frame/playlist?device=wrong-token')).status() === 401, 'wrong device token is refused');
   ok(tvErrors.length === 0, 'no script errors on the TV page' + (tvErrors.length ? ': ' + tvErrors.join('; ') : ''));
 

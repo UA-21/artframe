@@ -15,8 +15,8 @@
   // Thin wrapper: all logic lives on the server, so updates never need a reinstall.
   (function () {
     var msg = document.getElementById('msg');
-    if (typeof ARTFRAME_URL !== 'string' || ARTFRAME_URL.indexOf('YOUR-APP') !== -1) {
-      msg.innerHTML = 'ArtFrame<br>Set the TV link in config.js and reinstall.';
+    if (typeof ARTFRAME_URL !== 'string' || ARTFRAME_URL.indexOf('https://') !== 0) {
+      msg.innerHTML = 'ArtFrame<br>Set the site address in config.js and reinstall.';
       return;
     }
     function go() {

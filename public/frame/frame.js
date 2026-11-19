@@ -47,9 +47,9 @@
   var lastPoll = 'never';
   var loading = false;
 
-  function getJSON(url, cb) {
+  function getJSON(url, cb, method) {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
+    xhr.open(method || 'GET', url, true);
     xhr.timeout = 15000;
     xhr.onreadystatechange = function () {
       if (xhr.readyState !== 4) return;
@@ -186,14 +186,55 @@
     });
   }
 
+  // --- Pairing: a TV without a (valid) device token shows a short code to enter in Settings.
+  var pairing = false;
   function unpaired() {
+    if (pairing) return;
+    pairing = true;
+    device = '';
+    store('artframe_device', '');
     clearTimeout(timer);
+    items = [];
+    currentId = null;
     slides[0].className = 'slide';
     slides[1].className = 'slide';
-    message('ArtFrame<br>This TV is not paired.<br>Open the frame link shown in Settings.');
+    message('ArtFrame<br>Connecting\u2026');
+    getJSON('/api/frame/pair', function (status, data) {
+      if (status !== 200 || !data) {
+        pairing = false;
+        message('ArtFrame<br>Cannot reach the server. Retrying\u2026');
+        setTimeout(unpaired, 10000);
+        return;
+      }
+      message('To connect this TV, open<br><span class="host">' + escapeHtml(window.location.host) +
+        '</span><br>go to Settings \u2192 Connect a TV and enter<br><span class="code">' + escapeHtml(data.code) + '</span>');
+      waitForApproval(data.id);
+    }, 'POST');
+  }
+
+  function waitForApproval(id) {
+    setTimeout(function () {
+      getJSON('/api/frame/pair?id=' + encodeURIComponent(id), function (status, data) {
+        if (status === 200 && data && data.state === 'approved') {
+          device = data.device;
+          store('artframe_device', device);
+          pairing = false;
+          version = null;
+          lastCmdSeq = null;
+          message('');
+          loadPlaylist();
+        } else if (status === 200 && data && data.state === 'expired') {
+          pairing = false;
+          unpaired(); // get a fresh code
+        } else {
+          waitForApproval(id);
+        }
+      });
+    }, 3000);
   }
 
   function poll() {
+    if (!device || pairing) return;
     var url = '/api/frame/state?device=' + encodeURIComponent(device) +
       (currentId ? '&current=' + encodeURIComponent(currentId) : '');
     getJSON(url, function (status, s) {
@@ -283,11 +324,8 @@
   keepAwake();
 
   if (debugOn) startDebug();
-  if (!device) {
-    unpaired();
-    return;
-  }
-  loadPlaylist();
+  if (device) loadPlaylist();
+  else unpaired();
   setInterval(poll, pollMs);
   setTimeout(poll, 1500);
   window.addEventListener('resize', function () { if (items.length) show(pos); });

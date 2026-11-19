@@ -1,2 +1,2 @@
-// Paste the "TV link" from the ArtFrame Settings page here, then package the app.
-var ARTFRAME_URL = 'https://YOUR-APP.vercel.app/frame?device=YOUR-DEVICE-TOKEN';
+// Address of your ArtFrame site's TV page. No secret here: the TV pairs with a code shown on screen.
+var ARTFRAME_URL = 'https://artframe-seven.vercel.app/frame';
