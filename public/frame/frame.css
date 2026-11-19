@@ -106,3 +106,13 @@ html, body {
   font: bold 9vh/1.2 monospace;
   letter-spacing: 0.18em;
 }
+/* Tiny silent looping clip: TVs do not start their screen saver while video is playing. */
+#awake {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  opacity: 0.01;
+  pointer-events: none;
+}

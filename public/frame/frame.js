@@ -268,8 +268,10 @@
     if (key !== armedFor) { armedFor = key; arm(); }
   }
 
+  var debugStarted = false;
   function startDebug() {
     var frames = 0, fps = 0, last = Date.now();
+    debugStarted = true;
     el('debug').style.display = 'block';
     (function tick() {
       frames++;
@@ -285,7 +287,8 @@
         'images   ' + items.length + '  version ' + version + '\n' +
         'state    ' + (off ? 'scheduled off' : paused ? 'paused' : 'playing') + '\n' +
         'poll     ' + lastPoll + '\n' +
-        'awake    ' + wakeState + '   fullscreen ' + (isFullscreen() ? 'yes' : 'no (press OK)') + '\n' +
+        'awake    lock: ' + wakeState + '   video: ' + videoState + '   tv: ' + lunaState + '\n' +
+        'full     ' + (isFullscreen() ? 'yes' : 'no (press OK)') + '\n' +
         'agent    ' + navigator.userAgent;
     }
   }
@@ -316,12 +319,71 @@
   // OK / Enter on the remote (or a click) toggles full-screen and re-requests the wake lock.
   document.addEventListener('keydown', function (e) {
     if (e.keyCode === 13) { toggleFullscreen(); keepAwake(); }
+    // Red button on the remote (or the D key) shows/hides diagnostics.
+    if (e.keyCode === 403 || e.keyCode === 68) {
+      if (!debugStarted) startDebug();
+      else el('debug').style.display = el('debug').style.display === 'none' ? 'block' : 'none';
+    }
   });
   document.addEventListener('click', function () { toggleFullscreen(); keepAwake(); });
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') keepAwake();
   });
   keepAwake();
+
+  // Fallback 1: a tiny silent looping video. TVs hold off their screen saver during playback.
+  var awakeVideo = el('awake');
+  var videoState = 'idle';
+  function videoAwake() {
+    if (!awakeVideo) return;
+    if (off) {
+      // Outside scheduled hours the screen is black: let the TV rest.
+      if (!awakeVideo.paused) awakeVideo.pause();
+      videoState = 'paused (off hours)';
+      return;
+    }
+    if (!awakeVideo.paused) { videoState = 'playing'; return; }
+    try {
+      var p = awakeVideo.play();
+      if (p && p.then) p.then(function () { videoState = 'playing'; }, function (e) { videoState = 'blocked (' + (e && e.name) + ')'; });
+    } catch (e) { videoState = 'error'; }
+  }
+  if (awakeVideo) awakeVideo.addEventListener('error', function () { videoState = 'load error'; });
+
+  // Fallback 2 (LG webOS app only): tell the TV not to start its screen saver.
+  var lunaState = 'n/a';
+  var lunaBridges = [];
+  function lunaAwake() {
+    var Bridge = window.WebOSServiceBridge || window.PalmServiceBridge;
+    if (!Bridge) return;
+    var service = 'luna://com.webos.service.tvpower/power/';
+    var blocked = 0;
+    try {
+      var sub = new Bridge();
+      lunaBridges.push(sub);
+      sub.onservicecallback = function (raw) {
+        var msg = {};
+        try { msg = JSON.parse(raw); } catch (e) { /* ignore */ }
+        if (msg.returnValue === false) {
+          lunaState = 'refused (' + (msg.errorText || msg.errorCode || '?') + ')';
+        } else if (msg.state === 'Active' && msg.timestamp) {
+          if (off) return; // black screen by schedule: let the screen saver run
+          var reply = new Bridge();
+          lunaBridges = [sub, reply];
+          reply.call(service + 'responseScreenSaverRequest',
+            JSON.stringify({ clientName: 'artframe', ack: false, timestamp: msg.timestamp }));
+          lunaState = 'screen saver blocked x' + (++blocked);
+        } else if (lunaState === 'registering') {
+          lunaState = 'registered';
+        }
+      };
+      lunaState = 'registering';
+      sub.call(service + 'registerScreenSaverRequest', JSON.stringify({ subscribe: true, clientName: 'artframe' }));
+    } catch (e) { lunaState = 'error'; }
+  }
+  lunaAwake();
+  videoAwake();
+  setInterval(videoAwake, 15000);
 
   if (debugOn) startDebug();
   if (device) loadPlaylist();
