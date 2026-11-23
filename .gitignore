@@ -6,3 +6,4 @@ node_modules
 *.ipk
 !tv-app/*.ipk
 next-env.d.ts
+*.tsbuildinfo
